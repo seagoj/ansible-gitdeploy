@@ -1,0 +1,24 @@
+#!/bin/sh
+
+read oldrev newrev refname
+path=/home/www
+emailScriptPath=/opt/smrsh/processEmail.pl
+branch=${refname#refs/heads/}
+tag=${refname#refs/tags/}
+branch_allowed=$branch
+
+if [ "$tag" != "$refname" ]; then
+	git --git-dir=$path/.git --work-tree=$path fetch --tags
+	mysql -uroot -pBPS4mysql bps < /home/www/mysql/$tag.sql
+elif [ "$branch" != "$branch_allowed" ]; then
+	echo Only the $branch_allowed branch is autoupdated
+else
+	rm $emailScriptPath
+	git --git-dir=$path/.git --work-tree=$path fetch --all
+	#git --git-dir=$path/.git --work-tree=$path checkout branch
+	git --git-dir=$path/.git --work-tree=$path reset --hard origin/$branch
+	ln -s /home/www/_processEmail/processEmail.pl $emailScriptPath
+	# git --git-dir=$path/.git --work-tree=$path submodule foreach git pull
+	cd /home/www && composer install --no-dev
+	echo $branch updated
+fi

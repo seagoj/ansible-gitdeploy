@@ -1,0 +1,55 @@
+---
+- name: Install git
+  yum:
+    name: git
+    state: latest
+
+- name: Create deploy group
+  group:
+    name: deploy
+    state: present
+
+- name: Create git user
+  user:
+    name: git
+    state: present
+    group: deploy
+
+- name: Create Bot Repo directory
+  file:
+    path: /home/git/bot.git
+    state: directory
+    owner: git
+    group: deploy
+
+- name: Create bare repo
+  command: git --bare init
+  args:
+    chdir: /home/git/bot.git
+    creates: /home/git/bot.git/hooks
+
+- name: Copy post-receive
+  copy:
+    src: post-receive
+    dest: /home/git/bot.git/hooks/
+    owner: git
+    group: deploy
+    mode: 0755
+
+- name: Create DocumentRoot
+  command: "mkdir -p {{ document_root }}"
+  args:
+    creates: "{{ document_root }}"
+
+- name: Prepare document root repo
+  command: git init
+  args:
+    chdir: "{{ code_root }}"
+    creates: "{{ code_root }}/.git"
+
+- name: Set origin
+  command: "git remote add origin /home/git/bot.git"
+  args:
+    chdir: "{{ code_root }}"
+    creates: "{{ code_root }}/.git/refs/remotes/origin"
+  ignore_errors: yes
